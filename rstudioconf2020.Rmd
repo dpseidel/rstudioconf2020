@@ -74,54 +74,55 @@ class: center, middle
 ggplot(txhousing, aes(x = volume, y = median)) + geom_point(na.rm = T)
 ```
 
+
+
 ---
-class: center, middle
+class: center, middle, inverse 
+
 # Guides: Breaks & Labels
 
-# Making Guides easy: scales' formatters
-The scales package also provides useful helper 
-functions for formatting numeric data for all types of labels 
-As of 1.0.0, most of scales formatters are just variations on the generic `number()`
-and `number_format()` functions. 
+---
+class: center, middle
 
+# Making Guides easy: scales' functions for breaks and labels
+
+The scales package provides useful helper functions for formatting numeric data for all types of labels 
 
 ---
 class: center, middle
 
-# The number formatter
-+ The generic formatter offers consistency in behaviour and arguments across formatters
-and adds additional functionality for international customization.
+# A generic formatter: `label_number`
++ This generic formatter offers consistency in behaviour and arguments across formatters
+and offers additional functionality for international customization.
 + With it's adoption, existing formatters gained new, consistent arguments for 
 `scale`, `accuracy`, `trim`, `big.mark`, `decimal.mark`, `prefix`, `suffix` etc. 
 
 ---
-class: center, middle, inverse
+class: center, middle
 
 
-# The number formatter, in action
-By default, `number()` will take any numeric vector, round them to nearest whole
-number, add spaces between every 3 digits and return a character vector useful for
-feeding to a labels argument in ggplot2. 
+`label_*` functions output a function by default. 
+This makes 
+By default, `label_number()` will take any numeric vector, round them to nearest whole
+number, add spaces between every 3 digits and return a character vector 
+
 ```{r}
-label_number(c(12.3, 4, 12345.789, 0.0002))
+label_number()(c(12.3, 4, 12345.789, 0.0002))
 ```
 
 ---
-class: center, middle, inverse
-
+class: middle, left
 
 # Changing defaults
 You can easily specify a different rounding behavior, or change the `big_mark` 
 or `decimal_mark` for international 
 styling. Even add a `prefix` or a `suffix` or `scale` your numbers on the fly. 
 ```{r}
-label_number(c(12.3, 4, 12345.789, 0.0002),
+label_number(
   big.mark = ".",
-  decimal.mark = ",",
-  accuracy = .01
-)
+  decimal.mark = ",", 
+  accuracy = .01)(c(12.3, 4, 12345.789, 0.0002))
 ```
-
 
 ---
 class: left, middle
@@ -185,7 +186,7 @@ ggplot(dsamp, aes(x = carat, y = price, colour = clarity)) +
 ```
 
 ---
-class: center, middle, inverse
+class: left, middle
 
 ## Breaks
 
@@ -193,6 +194,11 @@ class: center, middle, inverse
 - `breaks_pretty()` is an alternative break calculation 
 - `breaks_log()` is used to set breaks for log transformed axes with `log_trans()`.
 - `breaks_width()` is used to set breaks by width, including for date and date/time axes.
+
+---
+class: center, middle, inverse 
+
+# Tranformations and Bounds
 
 ---
 class: center, middle
@@ -206,7 +212,7 @@ For example:
 `scale_*_sqrt()`, `scale_*_reverse()` functions in ggplot2. 
 
 ---
-class: center, middle
+class: left, middle
 
 ## Additional Transformations
 - `asn_trans()` : Arc-sin square root transformation.
@@ -247,6 +253,45 @@ ggplot(txhousing, aes(x = volume, y = median)) +
 ```
 
 ---
+class: center, middle
+
+## Rescaling data
+scales provides a handful of functions for rescaling data to fit new ranges.
+```{r rescale}
+# the rescale functions can rescale continuous vectors to new min, mid, or max values
+x <- runif(5, 0, 1)
+x
+rescale(x, to = c(0, 50))
+rescale_mid(x, mid = .25)
+rescale_max(x, to = c(0, 50))
+```
+
+---
+class: center, middle
+
+## Squish, Discard, Censor
+```{r squish}
+# squish() will squish your values into a specified range, respecting NAs
+squish(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
+# discard will drop data outside a range, respecting NAs
+scales::discard(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
+# censor will return NAs for values outside a range
+censor(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
+```
+
+---
+class: center, middle
+
+## Applied to ggplot2
+<font size= "4">Squish can be really useful for setting the `oob` argument for a colour scale with reduced limits.</font>
+```{r}
+ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, colour = Sepal.Length)) +
+  geom_point() + scale_color_continuous(limit = c(6, 8), oob = scales::squish)
+```
+
+---
+class: center, middle, inverse 
+
 # Palettes
 
 ---
@@ -311,44 +356,6 @@ scale_color_manual()
 scale_shape_manual()
 scale_size_manual()
 # using available scales functions!
-```
-
----
-class: center, middle
-
-# One last things: Bounds 
-## Rescaling data
-scales provides a handful of functions for rescaling data to fit new ranges.
-```{r rescale}
-# the rescale functions can rescale continuous vectors to new min, mid, or max values
-x <- runif(5, 0, 1)
-x
-rescale(x, to = c(0, 50))
-rescale_mid(x, mid = .25)
-rescale_max(x, to = c(0, 50))
-```
-
----
-class: center, middle, inverse
-
-## Squish, Discard, Censor
-```{r squish}
-# squish() will squish your values into a specified range, respecting NAs
-squish(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
-# discard will drop data outside a range, respecting NAs
-scales::discard(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
-# censor will return NAs for values outside a range
-censor(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
-```
-
----
-class: center, middle, inverse
-
-## Applied to ggplot2
-<font size= "4">Squish can be really useful for setting the `oob` argument for a colour scale with reduced limits.</font>
-```{r}
-ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, colour = Sepal.Length)) +
-  geom_point() + scale_color_continuous(limit = c(6, 8), oob = scales::squish)
 ```
 
 ---

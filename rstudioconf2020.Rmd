@@ -35,10 +35,19 @@ class: center, middle
 ![](scaleshex.png)
 
 The scales package provides the internal scaling infrastructure to
-[ggplot2](github.com/tidyverse/ggplot2) and exports standalone, **system-agnostic**,
+[ggplot2](https://github.com/tidyverse/ggplot2) and exports standalone, **system-agnostic**,
 functions. 
 
-**You can use scales to customize the transformations, breaks, guides and palettes in your visualizations.**
+The functions provided in the scales package try to make easier 5 different things about data scales:
+
+1. labels 
+2. breaks 
+3. transformations
+4. palettes
+5. bounds & rescaling
+
+
+Learning a little about these functions can help transform your plots and make you a true visualization magician `r emo::ji("wizard")`
 
 ---
 class: center, middle
@@ -54,75 +63,64 @@ mono_light(
   header_font_google = google_font("Josefin Sans"),
   text_font_google   = google_font("Montserrat", "300", "300i"),
   code_font_google   = google_font("Droid Mono"), 
-  code_inline_color = "#DF5286",
-  link_color = "#DF5286"
+  code_inline_color = "#DF5286", 
+  link_color = "#8a0057"
 )
 options(htmltools.dir.version = FALSE)
 knitr::opts_chunk$set(echo = TRUE, dpi = 180, fig.height = 4)
 ```
 
-![https://www.tidyverse.org/blog/2019/11/scales-1-1-0/](scales1-1.png)
+## `r emo::ji("warning")` Notable changes in [scales 1.1.0](https://www.tidyverse.org/blog/2019/11/scales-1-1-0/)!
 
-## `r emo::ji("warning")` Notable changes!
-
-+ New naming convention for guides functions: `breaks_*`, `labels_*` 
-
-`r emo::ji("point_right")` allows for nice tab completion!
++ New naming convention for guides functions: `breaks_*`, `labels_*` (enables easy tab completion!`r emo::ji("thumbs_up")`)
 
 + New `demo_*` functions for easy ggplot exampling
-
----
-class: center, middle
-
-## A plot in need of some improvement
-```{r, fig.height = 4}
-ggplot(txhousing, aes(x = volume, y = median)) + geom_point(na.rm = T)
-```
-
-
-
 ---
 class: center, middle, inverse 
 
 # Guides: Breaks & Labels
 
 ---
-class: center, middle
+class: left, middle
 
-# A generic formatter: `label_number`
+# Label Formatters:
 
-+ This generic formatter offers consistency in behaviour and arguments across scales' many other formatters and offers additional functionality for international customization.
-+ With it's adoption, existing formatters gained new, consistent arguments for 
-`scale`, `accuracy`, `trim`, `big.mark`, `decimal.mark`, `prefix`, `suffix` etc. 
+- `label_number`: a generic number formatter that forces intuitive decimal display of numbers
+- `label_dollar`, `label_percent`, `label_comma`
+- `label_scientific` 
+- `label_date`, `label_time` : Formatted dates and times.
+- `label_ordinal`: add ordinal suffixes (-st, -nd, -rd, -th) to numbers according to languages (e.g. English, Spanish, French).
+- `label_bytes`, `label_number_si` 
+- `label_parse`, `label_math`, `label_pvalue`
+-` label_wrap`
+
+For a full list and descriptions, see: [scales.r-lib.org/reference](scales.r-lib.org/reference)
 
 ---
 class: center, middle
 
+The output of all `label_*` functions is a function. All these output functions are designed to take a numeric vector (traditionally, of breaks) and return a nicely-formatted character vector.
+<br/>
 
-`label_*` functions output a function by default. 
 This makes it easy to use them directly as the input to a ggplot2 scale_* labels argument to automatically take the plots calculated breaks and label them with consistent style. 
 
----
-class: middle, left
-
-By default, `label_number()` forces decimal displays of numbers, `label_comma()`, `label_dollar`, and `label_percent()` are special cases of `label_number()` with different defaults. 
-
-```{r}
-label_number()(c(12.3, 4, 12345.789, 0.0002))
+```{r,fig.height = 1}
+demo_continuous(txhousing$median, labels = label_dollar())
 ```
 
-You can easily specify a different rounding behavior, or change the `big_mark` or `decimal_mark` for international styling. Even add a `prefix` or a `suffix` or `scale` your numbers on the fly. 
+---
+class: middle, center
+
+## Changing defaults
+
+Many of the `label_*` functions are built off of the generic `label_number` function, and allow users to easily customize label formats using consistent arguments. 
+
+Users can specify a different rounding behavior (`accuracy`), or change the `big_mark` or `decimal_mark` for international styling; even add a `prefix` or a `suffix` or `scale` your numbers on the fly. 
 
 ```{r}
-label_number(big.mark = ".",
-  decimal.mark = ",", accuracy = .0001)(c(12.3, 4, 12345.789, 0.0002))
+french_percent <- label_percent(decimal.mark = ",", suffix = " %", accuracy = .1)
+french_percent(runif(3))
 
-label_dollar()(c(100, 125, 3000))
-
-french_percent <- label_percent(decimal.mark = ",", suffix = " %")
-french_percent(runif(10))
-
-# currency formatting Euros (and simple conversion!)
 usd_to_euro <- label_dollar(prefix = "", suffix = "\u20ac", scale = .86)
 usd_to_euro(100)
 ```
@@ -130,66 +128,29 @@ usd_to_euro(100)
 ---
 class: left, middle
 
-# Other Formatters:
-
-- `label_date` `label_time()` : Formatted dates and times.
-- `label_ordinal()`: add ordinal suffixes (-st, -nd, -rd, -th) to numbers according to languages (english, spanish, french).
-- `label_pvalue` : p-values formatter
-- `label_scientific` : Scientific formatter
-- `label_number_auto` : Auto formatting in number and scientific
-- `label_bytes` `label_number_si` 
-- `label_parse` `label_math`
-
----
-
-`label_wrap`: handy wrapping! 
-
-```{r, fig.height = 2.5}
-x <- c(
-  "this is a long label",
-  "this is another long label",
-  "this a label this is even longer"
-)
-
-demo_discrete(x, labels = label_wrap(10))
-```
-
----
-class: center, middle
-
-# Applied to our example... 
-
----
-class: left, middle
-
 ## Breaks
 
-- `scales::breaks_extended()` sets most breaks by default in ggplot2
-- `breaks_pretty()` is an alternative break calculation 
+- `breaks_extended()` sets most breaks by default in ggplot2 using Wilkonson's algorithm
+- `breaks_pretty()` uses R's default breaks algorithm
 - `breaks_log()` is used to set breaks for log transformed axes with `log_trans()`.
-- `breaks_width()` is used to set breaks by width, including for date and date/time axes.
+- `breaks_width()` is used to set breaks by width, especially useful for date and date/time axes.
 
-```{r}
-dates <- txhousing$date %>% lubridate::date_decimal() %>%
-  lubridate::round_date("day")
 
-demo_datetime(dates)
-demo_datetime(dates, breaks = breaks_width("2 year"), labels = label_date_short())
-
-```
+Like the `label_*` functions, the output of each `breaks_*` function is a function. All these are designed to take a limits vector and return a numeric vector of break points.
 
 ---
 class: center, middle, inverse 
 
-# Tranformations and Bounds
+# Transformations
 
 ---
 class: center, middle
-# Transformations
 
 scales provides a number of common transformation functions (`*_trans()`) which specify functions to preform data transformations, format labels, and set correct breaks.
 
-For example:
+<br/>
+
+For example: <br/>
 `log_trans()`, `sqrt_trans()`, `reverse_trans()` power the `scale_*_log10()`,
 `scale_*_sqrt()`, `scale_*_reverse()` functions in ggplot2. 
 
@@ -223,54 +184,6 @@ si_log <- trans_new(
   format = label_number_si()
   )
 ```
-
----
-class: middle, left
-
-## Applied in ggplot2
-```{r}
-# apply our new transformation!
-ggplot(txhousing, aes(x = volume, y = median)) +
-  geom_point(na.rm = T) + scale_x_continuous(trans = si_log)
-```
-
----
-class: center, middle
-
-## Rescaling data
-scales provides a handful of functions for rescaling data to fit new ranges.
-```{r rescale}
-# the rescale functions can rescale continuous vectors to new min, mid, or max values
-x <- runif(5, 0, 1)
-x
-rescale(x, to = c(0, 50))
-rescale_mid(x, mid = .25)
-rescale_max(x, to = c(0, 50))
-```
-
----
-class: center, middle
-
-## Squish, Discard, Censor
-```{r squish}
-# squish() will squish your values into a specified range, respecting NAs
-squish(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
-# discard will drop data outside a range, respecting NAs
-scales::discard(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
-# censor will return NAs for values outside a range
-censor(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
-```
-
----
-class: center, middle
-
-## Applied to ggplot2
-<font size= "4">Squish can be really useful for setting the `oob` argument for a colour scale with reduced limits.</font>
-```{r}
-ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, colour = Sepal.Length)) +
-  geom_point() + scale_color_continuous(limit = c(6, 8), oob = scales::squish)
-```
-
 ---
 class: center, middle, inverse 
 
@@ -278,40 +191,32 @@ class: center, middle, inverse
 
 ---
 class: center, middle
-# Colour palettes `r emo::ji("art")`
-scales provides a number of color pallete functions that, given a range of values 
-or the number of colours your want, will return a range of colors by hex code. 
+
+# Color palettes `r emo::ji("art")`
+
+scales provides a number of color palette functions that, given a range of values 
+or the number of colors your want, will return a range of colors by hex code. 
 ```{r, palettes}
-# pull a list of colours from any palette
+# pull a list of colors from any palette
 viridis_pal()(4)
 brewer_pal(type = "div", direction = -1)(4)
 div_gradient_pal()(seq(0, 1, length.out = 4))
 ```
 
 ---
-
 class: center, middle
-# Using scales outside of ggplot2
-```{r, fig.width = 2 }
-# show_col is a quick way to view palette output
+
+# Hot tip `r emo::ji("fire")`
+
+Ever wondered what colors are going to look like before you use them? 
+Try `scales::show_col()`
+
+```{r,fig.height=3}
 show_col(viridis_pal()(4))
 ```
-
-# Use scales palettes with baseR
-These functions are primarily used under the hood in ggplot2, but can be combined 
-with any plotting system. For example, use them in combination with `grDevices::palette()`,
-provided with base R, to affect your base plots...
-
 ---
 class: center, middle
-# BaseR example
-```{r, fig.height = 3}
-palette(viridis_pal()(4))
-plot(Sepal.Length ~ Sepal.Width, data = iris, col = Species, pch = 20)
-```
 
----
-class: center, middle
 ## Non-color palettes
 Often you want to be able to scale elements other than color. e.g. size, alpha, shape... 
 Of course, scales handles those too!
@@ -324,7 +229,7 @@ shape_pal()(6)
 ---
 class: center, middle
 
-# See these in action in ggplot2
+## See these in action in `ggplot2`...
 ```{r, eval=FALSE}
 # color examples...
 scale_fill_brewer()
@@ -337,7 +242,109 @@ scale_shape_ordinal()
 scale_color_manual()
 scale_shape_manual()
 scale_size_manual()
-# using available scales functions!
+# use the values as they are from your data frame with 
+scale_color_identity()
+scale_shape_identity()
+scale_size_identity()
+```
+
+---
+class: center, middle
+
+## Or, apply them to BaseR!
+Remember, while scales functions are primarily used under the hood in ggplot2, they are generic enough to be combined with any plotting system. For example, use them in combination with `grDevices::palette()`, provided with base R, to affect your base plots...
+
+```{r, fig.height = 3}
+palette(viridis_pal()(4))
+plot(Sepal.Length ~ Sepal.Width, data = iris, col = Species, pch = 20)
+```
+
+---
+class: center, middle, inverse
+
+# Bounds 
+
+---
+class: center, middle
+
+## Rescaling data
+scales provides a handful of functions for rescaling data to fit new ranges.
+<br/>
+
+
+The rescale functions can help rescale continuous vectors to new min, mid, or max values
+```{r rescale}
+x <- runif(5, 0, 1)
+rescale(x, to = c(0, 50))
+rescale_mid(x, mid = .25)
+rescale_max(x, to = c(0, 50))
+```
+
+---
+class: center, middle
+
+## Squish, Discard, Censor
+
+- `squish` will squish your values into a specified range, respecting NAs
+- `discard` will drop data outside a range, respecting NAs
+- `censor`  will return NAs for values outside a range
+
+```{r squish}
+squish(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
+scales::discard(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
+censor(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
+```
+
+---
+class: center, middle
+
+#### Squish can be really useful for setting the `oob` argument for a color scale with reduced limits.
+```{r}
+ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, colour = Sepal.Length)) +
+  geom_point() + 
+  scale_color_continuous(limit = c(6, 8), oob = scales::squish)
+```
+
+
+---
+class: center, middle
+
+## Example:  A quick plot
+```{r, fig.height = 4}
+ggplot(txhousing, aes(x = volume, y = median)) + 
+  geom_point(na.rm = T)
+```
+---
+class: left, middle
+
+## With some scales magic... 
+
+```{r, eval=F}
+ggplot(txhousing, 
+       aes(x = volume, y = median, 
+           color = year, size = sales)) + 
+  geom_point(na.rm = T) + 
+  scale_x_continuous("Volume Sold", 
+                     trans = si_log) + # our transformation
+  scale_y_log10("Median House Sales Price", 
+                labels = label_dollar()) +
+  scale_color_viridis_c("Year") +
+  scale_size_area("# Sales")
+```
+
+---
+class: center, middle
+```{r, fig.height = 4, echo = F}
+ggplot(txhousing, 
+       aes(x = volume, y = median, 
+           color = year, size = sales)) + 
+  geom_point(na.rm = T) + 
+  scale_x_continuous("Volume Sold", 
+                     trans = si_log) + # our transformation
+  scale_y_log10("Median House Sales Price", 
+                labels = label_dollar()) +
+  scale_color_viridis_c("Year") +
+  scale_size_area("# Sales")
 ```
 
 ---

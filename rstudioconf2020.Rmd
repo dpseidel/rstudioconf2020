@@ -1,7 +1,7 @@
 ---
 title: 'Taking visualizations to the next level with the scales package'
-subtitle: '<img src="scaleshex.png" style="width: 100px" />'
-author: "Dana Seidel (@dpseidel)"
+subtitle: '<img src="scaleshex.png" style="width: 100px" />' 
+author: "Dana Seidel (@dpseidel) <br/><br/> https://scales.r-lib.org/"
 output:
   xaringan::moon_reader:
     lib_dir: libs
@@ -47,11 +47,14 @@ class: center, middle
 library(scales)
 library(ggplot2)
 library(xaringanthemer)
+library(dplyr)
+
 mono_light(
-  base_color = "#1c5253",
+  base_color = "#1C5253",
   header_font_google = google_font("Josefin Sans"),
   text_font_google   = google_font("Montserrat", "300", "300i"),
   code_font_google   = google_font("Droid Mono"), 
+  code_inline_color = "#DF5286",
   link_color = "#DF5286"
 )
 options(htmltools.dir.version = FALSE)
@@ -63,7 +66,9 @@ knitr::opts_chunk$set(echo = TRUE, dpi = 180, fig.height = 4)
 ## `r emo::ji("warning")` Notable changes!
 
 + New naming convention for guides functions: `breaks_*`, `labels_*` 
-  + allows for nice tab completion!
+
+`r emo::ji("point_right")` allows for nice tab completion!
+
 + New `demo_*` functions for easy ggplot exampling
 
 ---
@@ -84,16 +89,9 @@ class: center, middle, inverse
 ---
 class: center, middle
 
-# Making Guides easy: scales' functions for breaks and labels
-
-The scales package provides useful helper functions for formatting numeric data for all types of labels 
-
----
-class: center, middle
-
 # A generic formatter: `label_number`
-+ This generic formatter offers consistency in behaviour and arguments across formatters
-and offers additional functionality for international customization.
+
++ This generic formatter offers consistency in behaviour and arguments across scales' many other formatters and offers additional functionality for international customization.
 + With it's adoption, existing formatters gained new, consistent arguments for 
 `scale`, `accuracy`, `trim`, `big.mark`, `decimal.mark`, `prefix`, `suffix` etc. 
 
@@ -102,26 +100,31 @@ class: center, middle
 
 
 `label_*` functions output a function by default. 
-This makes 
-By default, `label_number()` will take any numeric vector, round them to nearest whole
-number, add spaces between every 3 digits and return a character vector 
+This makes it easy to use them directly as the input to a ggplot2 scale_* labels argument to automatically take the plots calculated breaks and label them with consistent style. 
+
+---
+class: middle, left
+
+By default, `label_number()` forces decimal displays of numbers, `label_comma()`, `label_dollar`, and `label_percent()` are special cases of `label_number()` with different defaults. 
 
 ```{r}
 label_number()(c(12.3, 4, 12345.789, 0.0002))
 ```
 
----
-class: middle, left
+You can easily specify a different rounding behavior, or change the `big_mark` or `decimal_mark` for international styling. Even add a `prefix` or a `suffix` or `scale` your numbers on the fly. 
 
-# Changing defaults
-You can easily specify a different rounding behavior, or change the `big_mark` 
-or `decimal_mark` for international 
-styling. Even add a `prefix` or a `suffix` or `scale` your numbers on the fly. 
 ```{r}
-label_number(
-  big.mark = ".",
-  decimal.mark = ",", 
-  accuracy = .01)(c(12.3, 4, 12345.789, 0.0002))
+label_number(big.mark = ".",
+  decimal.mark = ",", accuracy = .0001)(c(12.3, 4, 12345.789, 0.0002))
+
+label_dollar()(c(100, 125, 3000))
+
+french_percent <- label_percent(decimal.mark = ",", suffix = " %")
+french_percent(runif(10))
+
+# currency formatting Euros (and simple conversion!)
+usd_to_euro <- label_dollar(prefix = "", suffix = "\u20ac", scale = .86)
+usd_to_euro(100)
 ```
 
 ---
@@ -152,38 +155,9 @@ demo_discrete(x, labels = label_wrap(10))
 ```
 
 ---
-class: left, middle
-
-## label_* Examples 
-```{r, formatters}
-# label_percent takes a numeric and does your division and labelling for you
-label_percent()(x = c(0.1, 1 / 3, 0.56))
-
-# each label_* function can be customized
-# percent formatting in the French style
-french_percent <- label_percent(decimal.mark = ",", suffix = " %")
-french_percent(runif(10))
-
-# label_comma() adds commas into large numbers for easier readability
-label_comma()(10e6)
-
-# label_dollar() adds currency symbols
-label_dollar()(c(100, 125, 3000))
-
-# currency formatting Euros (and simple conversion!)
-usd_to_euro <- label_dollar(prefix = "", suffix = "\u20ac", scale = .86)
-usd_to_euro(100)
-```
-
----
 class: center, middle
 
-## Applied in ggplot scales
-```{r}
-dsamp <- dplyr::sample_n(diamonds, 1000)
-ggplot(dsamp, aes(x = carat, y = price, colour = clarity)) +
-  geom_point() + scale_y_continuous(labels = usd_to_euro)
-```
+# Applied to our example... 
 
 ---
 class: left, middle
@@ -195,6 +169,15 @@ class: left, middle
 - `breaks_log()` is used to set breaks for log transformed axes with `log_trans()`.
 - `breaks_width()` is used to set breaks by width, including for date and date/time axes.
 
+```{r}
+dates <- txhousing$date %>% lubridate::date_decimal() %>%
+  lubridate::round_date("day")
+
+demo_datetime(dates)
+demo_datetime(dates, breaks = breaks_width("2 year"), labels = label_date_short())
+
+```
+
 ---
 class: center, middle, inverse 
 
@@ -204,8 +187,7 @@ class: center, middle, inverse
 class: center, middle
 # Transformations
 
-scales provides a number of common transformation functions (`*_trans()`) which 
-specify functions to preform data transformations, format labels, and set correct breaks.
+scales provides a number of common transformation functions (`*_trans()`) which specify functions to preform data transformations, format labels, and set correct breaks.
 
 For example:
 `log_trans()`, `sqrt_trans()`, `reverse_trans()` power the `scale_*_log10()`,
@@ -229,7 +211,7 @@ class: middle, left
 
 ## Building your own transformations
 
-scales also gives users the ability to define and apply their own custom 
+Users can also define and apply their own custom 
 transformation functions for repeated use.
 ```{r transforms}
 # use trans_new to build a new transformation
@@ -359,12 +341,23 @@ scale_size_manual()
 ```
 
 ---
-class: center, middle, inverse
+class: center, middle
 
 ## Questions?
+
+**Read more about scales at [scales.r-lib.org](https://scales.r-lib.org/)**
+
+<br/>
 
 Slides: [danaseidel.com/rstudioconf2020](https://danaseidel.com/rstudioconf2020)
 
 Code: [github.com/dpseidel/rstudioconf2020](https://github.com/dpseidel/rstudioconf2020)
 
 @dpseidel on [Twitter](https://twitter.com/dpseidel) and [GitHub](https://github.com/dpseidel)
+
+<br/>
+
+`r emo::ji("clap")` Shout out to the wonderful `xaringan`, `xaringanthemer`, & `emo` packages which helped make these slides beautiful!
+
+
+And HUGE thank you to Hadley Wickham and other tidyverse developers who contributed so much to the scales 1.1.0 release! `r emo::ji("pray")`

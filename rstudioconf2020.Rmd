@@ -13,6 +13,11 @@ output:
       countIncrementalSlides: false
 
 ---
+class: middle, center, inverse
+
+![](engine.jpg)
+
+---
 class: middle, center
 
 
@@ -40,12 +45,11 @@ functions.
 
 The functions provided in the scales package try to make easier 5 different things about data scales:
 
-1. labels 
-2. breaks 
-3. transformations
-4. palettes
-5. bounds & rescaling
-
+1. transformations
+2. bounds and rescaling
+3. breaks 
+4. labels 
+5. palettes
 
 Learning a little about these functions can help transform your plots and make you a true visualization magician `r emo::ji("wizard")`
 
@@ -57,6 +61,7 @@ library(scales)
 library(ggplot2)
 library(xaringanthemer)
 library(dplyr)
+library(lubridate) 
 
 mono_light(
   base_color = "#1C5253",
@@ -64,7 +69,7 @@ mono_light(
   text_font_google   = google_font("Montserrat", "300", "300i"),
   code_font_google   = google_font("Droid Mono"), 
   code_inline_color = "#DF5286", 
-  link_color = "#8a0057"
+  link_color = "#d60f8d"
 )
 options(htmltools.dir.version = FALSE)
 knitr::opts_chunk$set(echo = TRUE, dpi = 180, fig.height = 4)
@@ -75,10 +80,158 @@ knitr::opts_chunk$set(echo = TRUE, dpi = 180, fig.height = 4)
 + New naming convention for guides functions: `breaks_*`, `labels_*` (enables easy tab completion!`r emo::ji("thumbs_up")`)
 
 + New `demo_*` functions for easy ggplot exampling
+
 ---
 class: center, middle, inverse 
 
-# Guides: Breaks & Labels
+
+# Transformations & Bounds
+
+---
+class: center, middle
+
+# Transformations
+
+scales provides a number of common transformation functions (`*_trans()`) which specify functions to preform data transformations, format labels, and set correct breaks.
+
+<br/>
+
+For example: <br/>
+`log_trans()`, `sqrt_trans()`, `reverse_trans()` power the `scale_*_log10()`,
+`scale_*_sqrt()`, `scale_*_reverse()` functions in ggplot2. 
+
+
+---
+class: center, middle
+
+```{r}
+ggplot(diamonds) +
+  geom_point(aes(y = price, x = carat))
+```
+
+
+---
+class: center, middle
+
+```{r}
+ggplot(diamonds) +
+  geom_point(aes(y = price, x = carat)) + 
+  scale_x_continuous(trans = log_trans()) +
+  scale_y_log10()
+```
+---
+class: center, middle
+
+```{r}
+ggplot(diamonds) +
+  geom_hex(aes(y = price, x = carat)) + 
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+---
+class: left, middle
+
+## Additional Transformations
+- `asn_trans()` : Arc-sin square root transformation.
+- `atanh_trans()` : Arc-tangent transformation.
+- `boxcox_trans()` `modulus_trans()` : Box-Cox & modulus transformations.
+- `date_trans()` `time_trans()` `hms_trans()` : transformations for date, datetime, and hms classes
+- `exp_trans()` : Exponential transformation (inverse of log transformation).
+- `pseudolog_trans()` : Pseudo-log transformation
+- `probabilty_trans()`: Probability transformation
+and more... 
+---
+class: middle, left
+
+## Building your own transformations
+
+Users can also define and apply their own custom 
+transformation functions for repeated use.
+```{r transforms}
+# use trans_new to build a new transformation
+dollar_log <- trans_new(
+  name = "dollar_log",
+  trans = log_trans(base = 10)$trans, # extract a single element from another trans
+  inverse = function(x) 10^(x), # or write your own custom functions
+  breaks = breaks_log(),
+  format = label_dollar()
+  )
+```
+
+---
+class: center, middle
+
+## Rescaling data
+scales provides a handful of functions for rescaling data to fit new ranges.
+<br/>
+
+The rescale functions can help rescale continuous vectors to new min, mid, or max values
+- `rescale` rescales to a new min and max
+- `rescale_mid` rescales to a new mid, max, and min
+- `rescale_max` rescales to a new maximum
+
+```{r rescale}
+# rescale to new min and max
+rescale(runif(5), to = c(0, 50))
+```
+
+---
+class: center, middle
+
+## Squish, Discard, Censor
+
+- `squish` will squish your values into a specified range, respecting NAs
+- `discard` will drop data outside a range, respecting NAs
+- `censor`  will return NAs for values outside a range
+
+```{r squish}
+squish(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
+scales::discard(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
+censor(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
+```
+
+---
+class: center, middle
+
+#### Squish can be really useful for setting the `oob` argument for a color scale with reduced limits.
+```{r}
+ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, colour = Sepal.Length)) +
+  geom_point() + 
+  scale_color_continuous(limit = c(6, 8), oob = scales::squish)
+```
+
+---
+class: center, middle, inverse 
+
+# Sensible Breaks for continuous scales
+
+---
+class: left, middle
+
+## Breaks
+
+- `breaks_extended()` sets most breaks by default in ggplot2 using Wilkonson's algorithm
+- `breaks_pretty()` uses R's default breaks algorithm
+- `breaks_log()` is used to set breaks for log transformed axes with `log_trans()`.
+- `breaks_width()` is used to set breaks by width, especially useful for date and date/time axes.
+
+The output of each `breaks_*` function is a function. All these are designed to take a vector of limits and return a vector of break points.
+
+---
+class: left, middle
+```{r}
+breaks_extended(n = 8)(c(74, 997))
+
+breaks_log(8)(c(74, 997))
+
+breaks_width(width = 8)(c(7, 111))
+```
+
+---
+class: center, middle, inverse 
+
+# Effective Labels
 
 ---
 class: left, middle
@@ -99,7 +252,7 @@ For a full list and descriptions, see: [scales.r-lib.org/reference](scales.r-lib
 ---
 class: center, middle
 
-The output of all `label_*` functions is a function. All these output functions are designed to take a numeric vector (traditionally, of breaks) and return a nicely-formatted character vector.
+Like break functions, the output of all `label_*` functions is a function. All these output functions are designed to take a numeric vector (traditionally, of breaks) and return a nicely-formatted character vector.
 <br/>
 
 This makes it easy to use them directly as the input to a ggplot2 scale_* labels argument to automatically take the plots calculated breaks and label them with consistent style. 
@@ -107,7 +260,6 @@ This makes it easy to use them directly as the input to a ggplot2 scale_* labels
 ```{r,fig.height = 1}
 demo_continuous(txhousing$median, labels = label_dollar())
 ```
-
 ---
 class: middle, center
 
@@ -128,62 +280,16 @@ usd_to_euro(100)
 ---
 class: left, middle
 
-## Breaks
-
-- `breaks_extended()` sets most breaks by default in ggplot2 using Wilkonson's algorithm
-- `breaks_pretty()` uses R's default breaks algorithm
-- `breaks_log()` is used to set breaks for log transformed axes with `log_trans()`.
-- `breaks_width()` is used to set breaks by width, especially useful for date and date/time axes.
-
-
-Like the `label_*` functions, the output of each `breaks_*` function is a function. All these are designed to take a limits vector and return a numeric vector of break points.
-
----
-class: center, middle, inverse 
-
-# Transformations
-
----
-class: center, middle
-
-scales provides a number of common transformation functions (`*_trans()`) which specify functions to preform data transformations, format labels, and set correct breaks.
-
-<br/>
-
-For example: <br/>
-`log_trans()`, `sqrt_trans()`, `reverse_trans()` power the `scale_*_log10()`,
-`scale_*_sqrt()`, `scale_*_reverse()` functions in ggplot2. 
-
----
-class: left, middle
-
-## Additional Transformations
-- `asn_trans()` : Arc-sin square root transformation.
-- `atanh_trans()` : Arc-tangent transformation.
-- `boxcox_trans()` `modulus_trans()` : Box-Cox & modulus transformations.
-- `date_trans()` `time_trans()` `hms_trans()` : transformations for date, datetime, and hms classes
-- `exp_trans()` : Exponential transformation (inverse of log transformation).
-- `pseudolog_trans()` : Pseudo-log transformation
-- `probabilty_trans()`: Probability transformation
-and more... 
-
----
-class: middle, left
-
-## Building your own transformations
-
-Users can also define and apply their own custom 
-transformation functions for repeated use.
-```{r transforms}
-# use trans_new to build a new transformation
-si_log <- trans_new(
-  name = "si_log",
-  trans = log_trans(base = 10)$trans, # extract a single element from another trans
-  inverse = function(x) 10^(x), # or write your own custom functions
-  breaks = breaks_log(),
-  format = label_number_si()
-  )
+```{r}
+# delightfully,s already implemented in args: date_breaks, date_labels
+filter(txhousing, city == "Houston") %>% 
+ggplot() +
+  geom_line(aes(y = sales, x = date_decimal(date))) +
+  scale_x_datetime("Month-Year", breaks = breaks_width("2 year"), 
+                   labels = label_date("%b %Y"))
 ```
+
+
 ---
 class: center, middle, inverse 
 
@@ -194,8 +300,7 @@ class: center, middle
 
 # Color palettes `r emo::ji("art")`
 
-scales provides a number of color palette functions that, given a range of values 
-or the number of colors your want, will return a range of colors by hex code. 
+scales provides a number of color palette functions that passed the number of colors you want or a range of gradient values, will return vector of colors by hex code. 
 ```{r, palettes}
 # pull a list of colors from any palette
 viridis_pal()(4)
@@ -221,7 +326,7 @@ class: center, middle
 Often you want to be able to scale elements other than color. e.g. size, alpha, shape... 
 Of course, scales handles those too!
 ```{r}
-your_data <- runif(13, 1, 20)
+your_data <- runif(5, 1, 20)
 area_pal(range = c(1, 20))(your_data)
 shape_pal()(6)
 ```
@@ -254,97 +359,13 @@ class: center, middle
 ## Or, apply them to BaseR!
 Remember, while scales functions are primarily used under the hood in ggplot2, they are generic enough to be combined with any plotting system. For example, use them in combination with `grDevices::palette()`, provided with base R, to affect your base plots...
 
-```{r, fig.height = 3}
-palette(viridis_pal()(4))
-plot(Sepal.Length ~ Sepal.Width, data = iris, col = Species, pch = 20)
-```
-
----
-class: center, middle, inverse
-
-# Bounds 
-
 ---
 class: center, middle
 
-## Rescaling data
-scales provides a handful of functions for rescaling data to fit new ranges.
-<br/>
-
-
-The rescale functions can help rescale continuous vectors to new min, mid, or max values
-```{r rescale}
-x <- runif(5, 0, 1)
-rescale(x, to = c(0, 50))
-rescale_mid(x, mid = .25)
-rescale_max(x, to = c(0, 50))
-```
-
----
-class: center, middle
-
-## Squish, Discard, Censor
-
-- `squish` will squish your values into a specified range, respecting NAs
-- `discard` will drop data outside a range, respecting NAs
-- `censor`  will return NAs for values outside a range
-
-```{r squish}
-squish(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
-scales::discard(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
-censor(c(-1, 0.5, 1, 2, NA), range = c(0, 1))
-```
-
----
-class: center, middle
-
-#### Squish can be really useful for setting the `oob` argument for a color scale with reduced limits.
 ```{r}
-ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, colour = Sepal.Length)) +
-  geom_point() + 
-  scale_color_continuous(limit = c(6, 8), oob = scales::squish)
-```
-
-
----
-class: center, middle
-
-## Example:  A quick plot
-```{r, fig.height = 4}
-ggplot(txhousing, aes(x = volume, y = median)) + 
-  geom_point(na.rm = T)
-```
----
-class: left, middle
-
-## With some scales magic... 
-
-```{r, eval=F}
-ggplot(txhousing, 
-       aes(x = volume, y = median, 
-           color = year, size = sales)) + 
-  geom_point(na.rm = T) + 
-  scale_x_continuous("Volume Sold", 
-                     trans = si_log) + # our transformation
-  scale_y_log10("Median House Sales Price", 
-                labels = label_dollar()) +
-  scale_color_viridis_c("Year") +
-  scale_size_area("# Sales")
-```
-
----
-class: center, middle
-```{r, fig.height = 4, echo = F}
-ggplot(txhousing, 
-       aes(x = volume, y = median, 
-           color = year, size = sales)) + 
-  geom_point(na.rm = T) + 
-  scale_x_continuous("Volume Sold", 
-                     trans = si_log) + # our transformation
-  scale_y_log10("Median House Sales Price", 
-                labels = label_dollar()) +
-  scale_color_viridis_c("Year") +
-  scale_size_area("# Sales")
+palette(viridis_pal()(4))
+plot(Sepal.Length ~ Sepal.Width, 
+     col = Species, pch=20, data = iris)
 ```
 
 ---
@@ -367,4 +388,4 @@ Code: [github.com/dpseidel/rstudioconf2020](https://github.com/dpseidel/rstudioc
 `r emo::ji("clap")` Shout out to the wonderful `xaringan`, `xaringanthemer`, & `emo` packages which helped make these slides beautiful!
 
 
-And HUGE thank you to Hadley Wickham and other tidyverse developers who contributed so much to the scales 1.1.0 release! `r emo::ji("pray")`
+And HUGE thank you to Hadley Wickham and other tidyverse community developers who contributed so much to the scales 1.1.0 release! `r emo::ji("pray")`
